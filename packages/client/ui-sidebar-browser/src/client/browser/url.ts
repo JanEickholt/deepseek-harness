@@ -16,6 +16,9 @@ export type BrowserAddressResult =
   | { readonly ok: true; readonly target: BrowserTarget }
   | { readonly ok: false; readonly reason: BrowserAddressFailure }
 
+/** Loopback host names; schemeless input names a local plain-HTTP dev service, so it parses as HTTP. Subdomain forms (`app.localhost`) count. */
+const LOOPBACK_HOSTNAME = /^(?:(?:[a-z0-9-]+\.)*localhost\.?|127(?:\.\d{1,3}){3}|\[::1\])$/iu
+
 /**
  * Parse one address-bar value into the fixed protocol allowlist.
  * @param input - user or typed-open input.
@@ -30,6 +33,7 @@ export function parseBrowserAddress(input: string, applicationOrigin?: string): 
   const candidate = explicitScheme ? trimmed : `https://${trimmed}`
   let url: URL
   try { url = new URL(candidate) } catch { return { ok: false, reason: 'invalid' } }
+  if (!explicitScheme && LOOPBACK_HOSTNAME.test(url.hostname)) url.protocol = 'http:'
   if (url.username !== '' || url.password !== '') return { ok: false, reason: 'credentials' }
   if (url.protocol === 'https:' || url.protocol === 'http:') {
     if (applicationOrigin !== undefined && applicationOrigin !== 'null') {

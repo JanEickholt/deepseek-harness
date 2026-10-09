@@ -34,6 +34,18 @@ describe('Browser address policy', () => {
     })
   })
 
+  it('defaults schemeless loopback input to HTTP', () => {
+    expect(parseBrowserAddress('localhost:5173/app', APP)).toEqual({
+      ok: true, target: { kind: 'http', url: 'http://localhost:5173/app', title: 'localhost' },
+    })
+    expect(parseBrowserAddress('app.localhost:3000/', APP)).toMatchObject({ ok: true, target: { kind: 'http' } })
+    expect(parseBrowserAddress('localhost.:5173/', APP)).toMatchObject({ ok: true, target: { kind: 'http' } })
+    expect(parseBrowserAddress('127.42.0.9:8080/', APP)).toMatchObject({ ok: true, target: { kind: 'http' } })
+    expect(parseBrowserAddress('[::1]:8080/', APP)).toMatchObject({ ok: true, target: { kind: 'http' } })
+    expect(parseBrowserAddress('example.com:8443/path', APP)).toMatchObject({ ok: true, target: { kind: 'https' } })
+    expect(parseBrowserAddress('https://localhost:8443', APP)).toMatchObject({ ok: true, target: { kind: 'https' } })
+  })
+
   it('rejects every undeclared or privileged form', () => {
     expect(parseBrowserAddress('', APP)).toEqual({ ok: false, reason: 'empty' })
     expect(parseBrowserAddress('javascript:alert(1)', APP)).toEqual({ ok: false, reason: 'protocol' })

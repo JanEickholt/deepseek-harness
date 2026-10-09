@@ -197,6 +197,8 @@ describe('BrowserBody', () => {
     await waitFor(() => { expect(mounted.view.container.querySelector('iframe')?.getAttribute('src')).toBe('https://example.com/two') })
     const frame = mounted.view.container.querySelector('iframe')!
     const revision = mounted.store.getSnapshot().byTab[TAB]!.request!.revision
+    // A cross-origin document denies reading its address; jsdom would otherwise expose about:blank.
+    Object.defineProperty(frame, 'contentWindow', { get: () => { throw new DOMException('blocked', 'SecurityError') } })
 
     fireEvent.load(frame)
     expect(mounted.store.getSnapshot().byTab[TAB]?.navigation).toEqual({ status: 'known', revision })
@@ -212,6 +214,34 @@ describe('BrowserBody', () => {
     expect(open).not.toHaveBeenCalled()
 
     fireEvent.click(mounted.view.getByRole('button', { name: zh.reload }))
+    expect(mounted.store.getSnapshot().byTab[TAB]?.navigation).toEqual({ status: 'loading', revision: revision + 1 })
+  })
+
+  it('shows the observed address when a later load stays readable', async () => {
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null)
+    const mounted = mountBrowser()
+    const input = mounted.view.getByRole('textbox')
+    fireEvent.change(input, { target: { value: 'https://example.com/one' } })
+    fireEvent.submit(input.closest('form')!)
+    await waitFor(() => { expect(mounted.view.container.querySelector('iframe')).not.toBeNull() })
+    fireEvent.change(input, { target: { value: 'https://example.com/two' } })
+    fireEvent.submit(input.closest('form')!)
+    await waitFor(() => { expect(mounted.view.container.querySelector('iframe')?.getAttribute('src')).toBe('https://example.com/two') })
+    const frame = mounted.view.container.querySelector('iframe')!
+    const revision = mounted.store.getSnapshot().byTab[TAB]!.request!.revision
+    Object.defineProperty(frame, 'contentWindow', { get: () => ({ location: { href: 'https://example.com/moved' } }) })
+    fireEvent.load(frame)
+    fireEvent.load(frame)
+    await waitFor(() => { expect(mounted.store.getSnapshot().byTab[TAB]?.navigation).toEqual({ status: 'unknown', revision }) })
+    expect(input).toHaveProperty('value', 'https://example.com/moved')
+    expect(mounted.view.queryByText(zh['address.changed'])).toBeNull()
+    expect(mounted.view.getByRole('button', { name: zh.back })).toHaveProperty('disabled', true)
+    expect(mounted.view.getByRole('button', { name: zh.forward })).toHaveProperty('disabled', true)
+    expect(mounted.view.getByRole('button', { name: zh.external })).toHaveProperty('disabled', false)
+    fireEvent.click(mounted.view.getByRole('button', { name: zh.external }))
+    expect(open).toHaveBeenCalledExactlyOnceWith('https://example.com/moved', '_blank', 'noopener,noreferrer')
+    fireEvent.submit(input.closest('form')!)
+    await waitFor(() => { expect(mounted.view.container.querySelector('iframe')?.getAttribute('src')).toBe('https://example.com/moved') })
     expect(mounted.store.getSnapshot().byTab[TAB]?.navigation).toEqual({ status: 'loading', revision: revision + 1 })
   })
 

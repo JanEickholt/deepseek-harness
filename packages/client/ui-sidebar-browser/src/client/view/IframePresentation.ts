@@ -12,9 +12,9 @@ interface IframeDocument {
   readonly sandboxed: boolean
 }
 
-/** Reports only what an iframe can observe without inspecting cross-origin content. */
+/** Reports iframe loads; a readable frame document includes its address, a cross-origin one hides it. */
 export interface IframePresentationEvents {
-  readonly loaded: (revision: number) => void
+  readonly loaded: (revision: number, observed: string | undefined) => void
   readonly failed: (revision: number) => void
   readonly remounted: () => void
 }
@@ -76,7 +76,10 @@ export class IframePresentation implements BrowserPresentation {
     element.dataset.sidebarBrowserFrame = 'iframe'
     if (current.sandboxed) element.setAttribute('sandbox', WEB_BROWSER_SANDBOX)
     element.addEventListener('load', () => {
-      if (this.element === element) this.events.loaded(current.revision)
+      if (this.element !== element) return
+      let observed: string | undefined
+      try { observed = element.contentWindow?.location.href } catch { /* cross-origin documents deny reading their address */ }
+      this.events.loaded(current.revision, observed)
     })
     element.addEventListener('error', () => {
       if (this.element === element) this.events.failed(current.revision)

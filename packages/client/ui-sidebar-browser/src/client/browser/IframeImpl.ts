@@ -6,12 +6,14 @@ import type { BrowserPageOptions } from './BrowserPage.ts'
 import { BrowserNavigation } from './BrowserNavigation.ts'
 import type { BrowserTarget } from './url.ts'
 
-/** Owns iframe navigation; the view reports loads without reading cross-origin content. */
+/** Owns iframe navigation; the view reports loads with the frame's address when its document is readable. */
 export class IframeImpl implements BrowserFrame {
   readonly sandbox: BrowserSandboxControl = { setEnabled: (enabled) => { this.setSandbox(enabled) } }
   private readonly navigation: BrowserNavigation
   private readonly store: SnapshotStore<BrowserFrameState>
   private sandboxed = true
+  /** Address reported for the current uncontrolled navigation; held only while the frame document is readable. */
+  private observed: string | undefined
   private error: BrowserLoadError | undefined
   private disposed = false
   private disposal: Promise<void> | undefined
@@ -23,11 +25,13 @@ export class IframeImpl implements BrowserFrame {
   }
 
   /**
-   * Record a controlled load or a later navigation to an unreadable address.
+   * Record a controlled load or a later navigation, keeping its address when the frame document is readable.
    * @param revision - document generation whose iframe emitted load.
+   * @param observed - address the loaded document reports, undefined when its origin is unreadable.
    */
-  handleLoaded(revision: number): void {
+  handleLoaded(revision: number, observed: string | undefined): void {
     if (this.disposed) return
+    this.observed = observed
     this.navigation.frameLoaded(revision)
     this.publish()
   }
@@ -84,14 +88,18 @@ export class IframeImpl implements BrowserFrame {
   private load(request: ReturnType<BrowserNavigation['navigate']> | undefined): void {
     if (request === undefined) return
     this.error = undefined
+    this.observed = undefined
     this.publish()
     this.presentation.show({ target: request.target, revision: request.revision, sandboxed: this.sandboxed })
   }
 
   private snapshot(): BrowserFrameState {
     const state = this.navigation.snapshot
-    const target = BrowserNavigation.current(state)
-    return { target, address: target === undefined ? 'empty' : state.navigation.status === 'unknown' ? 'unknown' : 'requested',
+    const requested = BrowserNavigation.current(state)
+    const observed = state.navigation.status === 'unknown' && requested !== undefined && this.observed !== undefined
+      ? { ...requested, url: this.observed } : undefined
+    return { target: observed ?? requested,
+      address: observed !== undefined ? 'observed' : requested === undefined ? 'empty' : state.navigation.status === 'unknown' ? 'unknown' : 'requested',
       loading: state.navigation.status === 'loading' && this.error === undefined,
       canGoBack: this.navigation.canGoBack, canGoForward: this.navigation.canGoForward,
       error: this.error, sandboxEnabled: this.sandboxed }

@@ -10,7 +10,7 @@ import { IframePresentation } from './view/IframePresentation.ts'
  */
 export function createIframePage(options: BrowserPageOptions): BrowserPage {
   const presentation = new IframePresentation({
-    loaded: (revision) => { frame.handleLoaded(revision) },
+    loaded: (revision, observed) => { frame.handleLoaded(revision, observed) },
     failed: (revision) => { frame.handleLoadFailed(revision) },
     remounted: () => { frame.reload() },
   })

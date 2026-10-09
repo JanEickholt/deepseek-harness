@@ -25,7 +25,7 @@ Browse HTTP(S) pages, including loopback services, inside independent right-Side
 <a id="use-this-package"></a>
 ## Use this package
 
-Browser is disabled by default in Web profiles and enabled on Desktop. Enable the shipped entry through the Web profile patch to use it. Open **Browser** from the right-Sidebar guide and enter an HTTP(S) URL. Chat HTTP(S) links open here when the [link preference](../ui-chat/README.md) selects **In-App Sidebar**. A host name without a scheme becomes HTTPS. Public and loopback targets use the same default sandbox. Each guide action or delegated message-link activation creates another Browser tab.
+Browser is disabled by default in Web profiles and enabled on Desktop. Enable the shipped entry through the Web profile patch to use it. Open **Browser** from the right-Sidebar guide and enter an HTTP(S) URL. Chat HTTP(S) links open here when the [link preference](../ui-chat/README.md) selects **In-App Sidebar**. A host name without a scheme becomes HTTPS; a loopback host name without a scheme becomes HTTP. Public and loopback targets use the same default sandbox. Each guide action or delegated message-link activation creates another Browser tab.
 
 ### When to choose it
 
@@ -44,7 +44,7 @@ Client plugins can open a tab through `ctx.sidebarRight.openTab('browser', { par
 
 The `browser.new` command opens a separate Browser page in the focused dock pane, replacing a guide and retaining existing content pages. From the conversation or a floating content page, it uses the active dock pane. Desktop defaults to Cmd+T on macOS and Ctrl+T on Windows; Windows and macOS Web use the [shortcut service’s platform defaults](../shortcuts/README.md); Linux Web leaves the command unbound. The guide button uses a blue globe and displays the effective shortcut inline without a duplicate tooltip.
 
-The toolbar provides Back, Forward, Reload, Go, and Open in system browser. Web also offers a per-tab sandbox toggle; disabling it is temporary and displays an amber warning with neutral text. Desktop shows the observed page title. After a restart, Browser shows the saved title and URL; Restore or Reload opens that address only when requested.
+The toolbar provides Back, Forward, Reload, Go, and Open in system browser. Web also offers a per-tab sandbox toggle; disabling it is temporary and displays an amber warning with neutral text. When a Web page navigates itself, the address bar follows the new address while the frame document is readable and marks the address changed otherwise. Desktop shows the observed page title. After a restart, Browser shows the saved title and URL; Restore or Reload opens that address only when requested.
 
 -----
 
@@ -56,7 +56,7 @@ The toolbar provides Back, Forward, Reload, Go, and Open in system browser. Web 
 
 ### Protocol policy
 
-The address parser accepts HTTP and HTTPS, including loopback targets. It rejects `file:` URLs, script/data/blob input, embedded credentials, the DSH application origin, and malformed addresses. Document Preview owns local-file rendering.
+The address parser accepts HTTP and HTTPS, including loopback targets; schemeless loopback input parses as HTTP. It rejects `file:` URLs, script/data/blob input, embedded credentials, the DSH application origin, and malformed addresses. Document Preview owns local-file rendering.
 
 ### Iframe carrier
 
